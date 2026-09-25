@@ -1,0 +1,45 @@
+export const uid = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
+  Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+
+/** Rest seconds → pill label, e.g. 150 → "2:30", 45 → "45s". */
+export function fmtRest(sec) {
+  if (!sec) return 'No rest'
+  if (sec < 60) return `${sec}s`
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** Milliseconds → "MM:SS". */
+export function fmtClock(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000))
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
+export function fmtDate(ts, opts = { month: 'short', day: 'numeric' }) {
+  return new Date(ts).toLocaleDateString(undefined, opts)
+}
+
+export function fmtAgo(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return fmtDate(ts)
+}
+
+export function fmtDuration(ms) {
+  const min = Math.round(ms / 60000)
+  if (min < 60) return `${min} min`
+  return `${Math.floor(min / 60)}h ${min % 60}m`
+}
+
+/** "80" → 80, "" → null. Accepts comma decimals ("72,5"). */
+export function toNum(v) {
+  if (v === '' || v === null || v === undefined) return null
+  const n = parseFloat(String(v).replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+export const REST_PRESETS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240]
