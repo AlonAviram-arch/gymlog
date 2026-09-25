@@ -2,17 +2,20 @@ import { useCallback, useEffect, useState } from 'react'
 import { loadState, saveState } from './lib/store'
 import { useRestTimer } from './hooks/useRestTimer'
 import BottomNav from './components/BottomNav'
-import CustomTab from './components/CustomTab'
+import ExercisesTab from './components/ExercisesTab'
 import HistoryTab from './components/HistoryTab'
 import RestTimerBar from './components/RestTimerBar'
 import SettingsSheet from './components/SettingsSheet'
 import WorkoutsTab from './components/WorkoutsTab'
+import WorkoutSummary from './components/WorkoutSummary'
+import { sessionSummary } from './lib/stats'
 
 export default function App() {
   const [state, setState] = useState(loadState)
   const [tab, setTab] = useState('workouts')
   const [openDayId, setOpenDayId] = useState(() => loadState().active?.dayId ?? null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [finished, setFinished] = useState(null) // { entry, summary } after finishing a workout
   const timer = useRestTimer(state.settings)
 
   useEffect(() => saveState(state), [state])
@@ -40,13 +43,15 @@ export default function App() {
               window.scrollTo({ top: 0 })
             }}
             onOpenSettings={() => setSettingsOpen(true)}
+            onFinished={(entry, earlier) => setFinished({ entry, summary: sessionSummary(entry, earlier) })}
           />
         )}
         {tab === 'history' && <HistoryTab state={state} act={act} onOpenSettings={() => setSettingsOpen(true)} />}
-        {tab === 'custom' && <CustomTab state={state} act={act} onOpenSettings={() => setSettingsOpen(true)} />}
+        {tab === 'library' && <ExercisesTab state={state} act={act} onOpenSettings={() => setSettingsOpen(true)} />}
       </main>
       <RestTimerBar timer={timer} />
       <BottomNav tab={tab} onChange={changeTab} />
+      {finished && <WorkoutSummary entry={finished.entry} summary={finished.summary} onClose={() => setFinished(null)} />}
       {settingsOpen && <SettingsSheet state={state} act={act} onClose={() => setSettingsOpen(false)} />}
     </div>
   )

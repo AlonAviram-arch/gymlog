@@ -1,15 +1,29 @@
-import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Flag, Home, Link2, Pencil, Plus, RotateCcw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight, Flag, HeartPulse, Home, Link2, Pencil, Plus, RotateCcw } from 'lucide-react'
 import * as A from '../lib/store'
 import { fmtAgo, fmtDuration } from '../lib/format'
+import { entryToExercise } from '../data/library'
 import AlternativesSheet from './AlternativesSheet'
+import ExerciseBrowser, { PlanExerciseDemo } from './ExerciseBrowser'
+import { mediaFor } from '../data/media'
 import ExerciseCard from './ExerciseCard'
 import ExerciseForm from './ExerciseForm'
-import { SettingsButton } from './ui'
+import { SettingsButton, Sheet } from './ui'
 
-export default function WorkoutsTab({ state, act, timer, openDayId, setOpenDayId, onOpenSettings }) {
+export default function WorkoutsTab({ state, act, timer, openDayId, setOpenDayId, onOpenSettings, onFinished }) {
   const day = state.plan.find((d) => d.id === openDayId)
-  if (day) return <DayView day={day} state={state} act={act} timer={timer} onBack={() => setOpenDayId(null)} onOpenDay={setOpenDayId} />
+  if (day)
+    return (
+      <DayView
+        day={day}
+        state={state}
+        act={act}
+        timer={timer}
+        onBack={() => setOpenDayId(null)}
+        onOpenDay={setOpenDayId}
+        onFinished={onFinished}
+      />
+    )
   return <DayList state={state} onOpen={setOpenDayId} onOpenSettings={onOpenSettings} />
 }
 
@@ -24,7 +38,7 @@ function DayList({ state, onOpen, onOpenSettings }) {
           <h1 className="text-2xl font-bold tracking-tight">
             Gym<span className="text-emerald-400">Log</span>
           </h1>
-          <p className="text-sm text-zinc-400">3-day split + home forearms</p>
+          <p className="text-sm text-zinc-400">3-day split · home forearms · cardio</p>
         </div>
         <SettingsButton onClick={onOpenSettings} />
       </header>
@@ -52,6 +66,7 @@ function DayList({ state, onOpen, onOpenSettings }) {
         {state.plan.map((d) => {
           const last = lastDone(d.id)
           const isHome = d.id === 'home'
+          const isCardio = d.id === 'cardio'
           return (
             <li key={d.id}>
               <button
@@ -60,10 +75,10 @@ function DayList({ state, onOpen, onOpenSettings }) {
               >
                 <div
                   className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-lg font-bold ${
-                    isHome ? 'bg-cyan-500/15 text-cyan-300' : 'bg-emerald-500/15 text-emerald-300'
+                    isHome || isCardio ? 'bg-cyan-500/15 text-cyan-300' : 'bg-emerald-500/15 text-emerald-300'
                   }`}
                 >
-                  {isHome ? <Home size={24} /> : d.name.replace(/\D/g, '') || d.name[0]}
+                  {isHome ? <Home size={24} /> : isCardio ? <HeartPulse size={24} /> : d.name.replace(/\D/g, '') || d.name[0]}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{d.name}</div>
@@ -93,12 +108,33 @@ function groupExercises(list) {
   return groups
 }
 
-function DayView({ day, state, act, timer, onBack, onOpenDay }) {
+/** Re-renders every `ms` while `on` (for the live session clock). */
+function useTick(on, ms = 1000) {
+  const [, set] = useState(0)
+  useEffect(() => {
+    if (!on) return
+    const id = setInterval(() => set((n) => n + 1), ms)
+    return () => clearInterval(id)
+  }, [on, ms])
+}
+
+const fmtElapsed = (ms) => {
+  const t = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(t / 3600)
+  const mm = String(Math.floor((t % 3600) / 60)).padStart(h ? 2 : 1, '0')
+  const ss = String(t % 60).padStart(2, '0')
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function DayView({ day, state, act, timer, onBack, onOpenDay, onFinished }) {
   const [editing, setEditing] = useState(false)
   const [swapEx, setSwapEx] = useState(null)
-  const [form, setForm] = useState(null) // { mode: 'add' } | { mode: 'edit', ex }
+  const [demoEx, setDemoEx] = useState(null)
+  const [form, setForm] = useState(null) // { mode: 'add', initial? } | { mode: 'edit', ex }
+  const [picking, setPicking] = useState(false) // library picker for "Add exercise"
 
   const isActiveHere = state.active?.dayId === day.id
+  useTick(isActiveHere)
   const otherDay = state.active && !isActiveHere ? state.plan.find((d) => d.id === state.active.dayId) : null
   const blocked = Boolean(otherDay) || (state.active && !otherDay && !isActiveHere)
 
@@ -110,7 +146,7 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
     const sets = A.setsFor(state, day.id, ex)
     const nowDone = !sets[i].done
     act(A.updateSet, day.id, ex, i, { done: nowDone })
-    if (nowDone && ex.rest) timer.start(ex.rest, `${ex.name} · Set ${i + 1}`)
+    if (nowDone && ex.rest) timer.start(ex.rest, `${ex.name} · ${ex.type === 'cardio' ? 'Round' : 'Set'} ${i + 1}`)
   }
 
   const finish = () => {
@@ -119,9 +155,11 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
       return
     }
     if (!confirm(`Finish workout and save ${doneSets} completed set${doneSets === 1 ? '' : 's'}?`)) return
-    act(A.finishWorkout)
+    const next = A.finishWorkout(state)
+    act(A.replaceState, next)
     timer.skip()
     onBack()
+    if (next.history.length > state.history.length) onFinished?.(next.history[next.history.length - 1], state.history)
   }
 
   const discard = () => {
@@ -146,9 +184,11 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
       onChangeSet={(i, patch) => act(A.updateSet, day.id, ex, i, patch)}
       onToggleDone={(i) => toggleDone(ex, i)}
       onStartRest={() => timer.start(ex.rest, ex.name)}
+      onStartCountdown={(sec) => timer.start(sec, ex.name, 'cardio')}
       onAddSet={() => act(A.addSet, day.id, ex)}
       onRemoveSet={() => act(A.removeSet, day.id, ex)}
       onSuggest={() => setSwapEx(ex)}
+      onDemo={() => setDemoEx(ex)}
       onMove={(dir) => act(A.moveExercise, day.id, ex.id, dir)}
       onEdit={() => setForm({ mode: 'edit', ex })}
       onRemove={() => confirm(`Remove "${ex.name}" from ${day.name}?`) && act(A.removeExercise, day.id, ex.id)}
@@ -158,7 +198,11 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
   return (
     <>
       <header className="sticky top-0 z-20 -mx-4 -mt-[env(safe-area-inset-top)] mb-3 flex items-center gap-2 border-b border-zinc-800/80 bg-zinc-950/95 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur">
-        <button onClick={onBack} className="grid h-12 w-12 place-items-center rounded-full text-zinc-300 active:bg-zinc-800" aria-label="Back">
+        <button
+          onClick={onBack}
+          className="grid h-12 w-12 place-items-center rounded-full text-zinc-300 active:bg-zinc-800"
+          aria-label="Back"
+        >
           <ChevronLeft size={26} />
         </button>
         <div className="min-w-0 flex-1">
@@ -179,13 +223,24 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
       {!editing && (
         <div className="mb-4">
           <div className="mb-1.5 flex justify-between text-xs text-zinc-400">
-            <span>{isActiveHere ? `Started ${fmtDuration(Date.now() - state.active.startedAt)} ago` : 'Log a set to start the session'}</span>
+            <span>
+              {isActiveHere ? (
+                <span className="font-mono text-sm font-semibold text-zinc-200 tabular-nums">
+                  ⏱ {fmtElapsed(Date.now() - state.active.startedAt)}
+                </span>
+              ) : (
+                'Log a set to start the session'
+              )}
+            </span>
             <span className="tabular-nums">
               {doneSets}/{totalSets} sets
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${totalSets ? (doneSets / totalSets) * 100 : 0}%` }} />
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${totalSets ? (doneSets / totalSets) * 100 : 0}%` }}
+            />
           </div>
         </div>
       )}
@@ -237,7 +292,7 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
 
       {editing && (
         <button
-          onClick={() => setForm({ mode: 'add' })}
+          onClick={() => setPicking(true)}
           className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700 font-semibold text-zinc-300 active:bg-zinc-900"
         >
           <Plus size={20} /> Add exercise
@@ -246,32 +301,73 @@ function DayView({ day, state, act, timer, onBack, onOpenDay }) {
 
       {!editing && isActiveHere && (
         <div className="mt-6 flex gap-2">
-          <button onClick={discard} className="flex h-14 items-center gap-2 rounded-2xl bg-zinc-800 px-5 font-semibold text-zinc-300" aria-label="Discard session">
+          <button
+            onClick={discard}
+            className="flex h-14 items-center gap-2 rounded-2xl bg-zinc-800 px-5 font-semibold text-zinc-300"
+            aria-label="Discard session"
+          >
             <RotateCcw size={18} />
           </button>
-          <button onClick={finish} className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-lg font-bold text-zinc-950">
+          <button
+            onClick={finish}
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-lg font-bold text-zinc-950"
+          >
             <Flag size={20} /> Finish Workout
           </button>
         </div>
       )}
+
+      {demoEx && <PlanExerciseDemo ex={demoEx} media={mediaFor(demoEx)} onClose={() => setDemoEx(null)} />}
 
       {swapEx && (
         <AlternativesSheet
           exercise={swapEx}
           customExercises={state.customExercises}
           onClose={() => setSwapEx(null)}
-          onPick={(name, muscle) => {
-            act(A.replaceExercise, day.id, swapEx.id, name, muscle)
+          onPick={(name, muscle, entry) => {
+            // Swapping between strength and cardio adopts the new type's defaults.
+            const next = entry && entryToExercise(entry)
+            const typeChanged = next && (next.type === 'cardio') !== (swapEx.type === 'cardio')
+            act(
+              A.replaceExercise,
+              day.id,
+              swapEx.id,
+              name,
+              muscle,
+              typeChanged ? next : next ? { media: next.media, libId: next.libId } : {},
+            )
             setSwapEx(null)
           }}
         />
+      )}
+
+      {picking && (
+        <Sheet title={`Add to ${day.name}`} onClose={() => setPicking(false)}>
+          <button
+            onClick={() => {
+              setPicking(false)
+              setForm({ mode: 'add' })
+            }}
+            className="mb-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-700 text-sm font-semibold text-zinc-300"
+          >
+            <Plus size={18} /> Create your own{state.customExercises.length ? ' / use My Custom' : ''}
+          </button>
+          <ExerciseBrowser
+            pickLabel="Add this exercise"
+            onPick={(entry) => {
+              setPicking(false)
+              setForm({ mode: 'add', initial: entryToExercise(entry) })
+            }}
+          />
+        </Sheet>
       )}
 
       {form?.mode === 'add' && (
         <ExerciseForm
           title={`Add to ${day.name}`}
           submitLabel="Add exercise"
-          quickPicks={state.customExercises}
+          initial={form.initial}
+          quickPicks={form.initial ? [] : state.customExercises}
           onClose={() => setForm(null)}
           onSubmit={(data) => {
             act(A.addExercise, day.id, data)

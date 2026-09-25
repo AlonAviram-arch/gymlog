@@ -1,16 +1,34 @@
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Library } from 'lucide-react'
 import { ALTERNATIVES } from '../data/alternatives'
 import { MUSCLES, muscleLabel } from '../data/muscles'
+import { MUSCLE_TO_TARGETS, entryToExercise } from '../data/library'
+import ExerciseBrowser from './ExerciseBrowser'
 import { Sheet, inputCls } from './ui'
 
 export default function AlternativesSheet({ exercise, customExercises, onPick, onClose }) {
   const [muscle, setMuscle] = useState(exercise.muscle in MUSCLES ? exercise.muscle : 'other')
   const [custom, setCustom] = useState('')
+  const [browsing, setBrowsing] = useState(false)
 
   const catalog = ALTERNATIVES[muscle] ?? []
   const mine = customExercises.filter((c) => c.muscle === muscle).map((c) => c.name)
   const options = [...new Set([...mine, ...catalog])].filter((n) => n !== exercise.name)
+
+  if (browsing) {
+    return (
+      <Sheet title="Swap from library" onClose={onClose}>
+        <button onClick={() => setBrowsing(false)} className="mb-3 flex h-10 items-center gap-1 text-sm font-medium text-emerald-400">
+          <ChevronLeft size={18} /> Suggested swaps
+        </button>
+        <ExerciseBrowser
+          initialTargets={MUSCLE_TO_TARGETS[exercise.muscle] ?? []}
+          pickLabel="Swap to this exercise"
+          onPick={(entry) => onPick(entry.name, entryToExercise(entry).muscle, entry)}
+        />
+      </Sheet>
+    )
+  }
 
   return (
     <Sheet title="Swap exercise" onClose={onClose}>
@@ -46,6 +64,13 @@ export default function AlternativesSheet({ exercise, customExercises, onPick, o
         {!options.length && <li className="py-4 text-center text-sm text-zinc-500">No alternatives for {muscleLabel(muscle)} yet.</li>}
       </ul>
 
+      <button
+        onClick={() => setBrowsing(true)}
+        className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-cyan-500/15 font-semibold text-cyan-300"
+      >
+        <Library size={18} /> Browse full library (1,300+ exercises)
+      </button>
+
       <form
         className="mt-5 flex gap-2"
         onSubmit={(e) => {
@@ -54,7 +79,10 @@ export default function AlternativesSheet({ exercise, customExercises, onPick, o
         }}
       >
         <input className={inputCls} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Or type any exercise…" />
-        <button disabled={!custom.trim()} className="h-12 shrink-0 rounded-xl bg-emerald-500 px-4 font-semibold text-zinc-950 disabled:opacity-40">
+        <button
+          disabled={!custom.trim()}
+          className="h-12 shrink-0 rounded-xl bg-emerald-500 px-4 font-semibold text-zinc-950 disabled:opacity-40"
+        >
           Use
         </button>
       </form>

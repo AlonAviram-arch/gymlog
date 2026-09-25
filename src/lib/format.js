@@ -1,6 +1,5 @@
 export const uid = () =>
-  (typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
-  Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+  (typeof crypto !== 'undefined' && crypto.randomUUID?.()) || Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
 
 /** Rest seconds → pill label, e.g. 150 → "2:30", 45 → "45s". */
 export function fmtRest(sec) {
@@ -40,6 +39,25 @@ export function toNum(v) {
   if (v === '' || v === null || v === undefined) return null
   const n = parseFloat(String(v).replace(',', '.'))
   return Number.isFinite(n) ? n : null
+}
+
+const CARDIO_UNITS = { duration: ' min', speed: ' km/h', incline: '%', distance: ' km', level: ' lvl', calories: ' kcal' }
+
+/** One logged set → "80×8", "10×45s" or "30 min · 5.5 km/h · 12%". */
+export function fmtSetShort(set, ex) {
+  if (ex.type === 'cardio') {
+    const parts = (ex.metrics ?? Object.keys(CARDIO_UNITS))
+      .filter((m) => set[m] != null && set[m] !== '')
+      .map((m) => `${set[m]}${CARDIO_UNITS[m] ?? ''}`)
+    return parts.join(' · ') || '–'
+  }
+  return `${set.weight ?? '–'}×${set.reps ?? '–'}${ex.unit === 'sec' ? 's' : ''}`
+}
+
+/** Like fmtSetShort but spelled out for history lists: "80 kg × 8". */
+export function fmtSetLong(set, ex) {
+  if (ex.type === 'cardio') return fmtSetShort(set, ex)
+  return `${set.weight ?? '–'} kg × ${set.reps ?? '–'}${ex.unit === 'sec' ? 's' : ''}`
 }
 
 export const REST_PRESETS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240]

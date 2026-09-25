@@ -8,20 +8,25 @@ A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It
 
 | Area | What you get |
 | --- | --- |
-| **Pre-loaded program** | A 3-day full-body split plus a home forearm routine, ready to use on first launch. |
+| **Pre-loaded program** | A 3-day full-body split, a home forearm routine and a cardio day, ready to use on first launch. |
+| **Exercise library** | 1,300+ exercises from the [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset), plus common gym cardio. Search by name, **filter by muscle** (optionally including secondary muscles) and **by equipment** (30 types), read step-by-step instructions, and add any exercise to any day. |
+| **Exercise demos** | Animated GIF demos in the library, and a thumbnail on every workout card. Tap it for the demo plus step-by-step instructions. Demos you open (or all your plan's demos, from Settings) are cached for offline use. |
+| **Workout complete** | After finishing: duration, sets, volume vs. last time, a fun weight comparison, and any **personal records** (heaviest weight or best estimated 1RM). A live session clock runs while you train. |
+| **Overview dashboard** | History → Overview: workouts this week vs. your weekly goal, **week streak**, consistency (weeks on goal), total volume/time/cardio, a GitHub-style **activity calendar** and **sets per muscle** for the last 30 days. |
+| **Cardio logging** | Treadmill incline walks, bikes, rowers and more. Each round logs the fields you choose (time, speed, incline, distance, level, calories) instead of kg × reps. A "Timer 30 min" button counts down your cardio block. |
 | **Active workout tracker** | One-handed checklist with per-set **kg × reps** inputs and big ✓ buttons. |
 | **Auto-fill** | Each set pre-fills with the weight/reps from your previous session of that exercise, and a "Last:" line shows the whole previous session. |
 | **Rest timer** | Checking off a set starts that exercise's prescribed rest. A sticky bar shows **MM:SS**, a progress bar, and **−15s / +15s / Pause / Skip**. Tap any rest pill to start the timer manually. |
 | **Alerts** | Double-beep synthesized with the Web Audio API (no audio files), plus `navigator.vibrate([200, 100, 200])`. The screen stays awake while resting (Wake Lock API). |
 | **Supersets** | Grouped visually. The first movement has no rest, and the rest timer runs after the second. |
 | **Plan management** | Per day: reorder (↑/↓), remove, edit sets/reps/rest, or add exercises. |
-| **Suggest alternative** | Swap any exercise for another from a catalog grouped by muscle target (14 groups), from your own custom exercises, or type any name. |
+| **Suggest alternative** | Swap any exercise for curated suggestions for the same muscle, your own custom exercises, the full library pre-filtered to that muscle, or any name you type. |
 | **Custom exercises** | Build a personal library (name, muscle, sets, rep range, rest, reps/seconds) and add items to any day. |
-| **History & progress** | Per-exercise chart of your top set over time, best/latest stats, per-session set lists, and a full session log with delete. |
+| **History & progress** | Per-exercise chart of your top set over time (for cardio: time, distance, speed or incline per session), best/latest stats, per-session set lists, and a full session log with delete. |
 | **Backup** | Export or import all data as JSON from Settings (⚙). |
 | **Offline PWA** | Service worker precaches the app. It installs to the home screen and runs with no connection. |
 
-**Design:** dark by default (zinc background, emerald/cyan accents), sticky bottom nav (**Workouts · History · Custom Exercises**), 44–56 px touch targets, 16 px inputs (no iOS zoom on focus), safe-area aware for notched phones.
+**Design:** dark by default (zinc background, emerald/cyan accents), sticky bottom nav (**Workouts · History · Exercises**), 44–56 px touch targets, 16 px inputs (no iOS zoom on focus), safe-area aware for notched phones.
 
 ---
 
@@ -82,6 +87,14 @@ Rest times are the prescribed defaults. You can edit them in the app.
 | 2 | Reverse DB Wrist Curls (Palms Down) | 3 × 15–20 | 60 s |
 | 3 | Dumbbell Farmer's Holds / Carries | 3 × 45–60 s | 60 s |
 
+### Cardio: Treadmill & Conditioning
+
+| # | Exercise | Target | Logged per round |
+| --- | --- | --- | --- |
+| 1 | Treadmill Incline Walk | 30 min | time, speed, incline, distance |
+
+Add more cardio from **Exercises → Library** (use the *Cardio* muscle filter), or add a cardio exercise to the end of any lifting day.
+
 > The original program doesn't specify superset or forearm rest times. The 90 s and 60 s values above are defaults you can change with **Edit → ✎** on any exercise.
 
 ---
@@ -106,6 +119,7 @@ Other scripts:
 npm run build     # production build → dist/
 npm run preview   # serve the production build locally (service worker enabled)
 npm run icons     # regenerate the PNG app icons in public/
+npm run build:exercises   # re-download the exercise library into src/data/exerciseDb.json
 ```
 
 > **Note:** browsers only enable service workers (offline mode and install) on **HTTPS** or `localhost`. The LAN `http://192.168…` address is fine for testing the UI. For a real home-screen install, deploy it (see below).
@@ -117,14 +131,17 @@ npm run icons     # regenerate the PNG app icons in public/
 ├── vite.config.js             # React + Tailwind + PWA manifest/service worker
 ├── public/                    # favicon.svg, pwa-192/512.png, apple-touch-icon.png
 ├── scripts/generate-icons.mjs # zero-dependency PNG icon generator
+├── scripts/build-exercise-db.mjs # builds the exercise library (text + media ids) from the dataset
 ├── .github/workflows/deploy.yml  # GitHub Pages deployment
 └── src/
     ├── App.jsx                # state, tabs, timer wiring
-    ├── data/                  # defaultPlan.js, alternatives.js, muscles.js
-    ├── lib/                   # store.js (state + actions), alerts.js (beep/vibrate), format.js
+    ├── data/                  # defaultPlan.js, alternatives.js, muscles.js, cardio.js,
+    │                          # library.js + exerciseDb.json (the exercise library, lazy-loaded)
+    ├── lib/                   # store.js (state + actions), stats.js (PRs, streaks, calendar), alerts.js, format.js
     ├── hooks/useRestTimer.js  # timestamp-based countdown, alerts, wake lock
-    └── components/            # WorkoutsTab, ExerciseCard, RestTimerBar, HistoryTab,
-                               # ProgressChart, CustomTab, AlternativesSheet, ExerciseForm, SettingsSheet
+    └── components/            # WorkoutsTab, ExerciseCard, RestTimerBar, HistoryTab, ProgressChart,
+                               # ExercisesTab, ExerciseBrowser, CustomExercises, AlternativesSheet,
+                               # ExerciseForm, SettingsSheet
 ```
 
 ---
@@ -187,7 +204,7 @@ After the first load everything is cached, so the app works in airplane mode. Ne
 
 ## Data format
 
-All state is stored under the `localStorage` key `gymlog:v1`. The export file has the same shape:
+All state is stored under the `localStorage` key `gymlog:v1` (settings include `weeklyGoal`, default 3). The export file has the same shape:
 
 ```jsonc
 {
@@ -201,4 +218,18 @@ All state is stored under the `localStorage` key `gymlog:v1`. The export file ha
 }
 ```
 
+Cardio exercises have `"type": "cardio"` and a `"metrics"` list (e.g. `["duration", "speed", "incline", "distance"]`), and their logged sets use those keys (`{ "duration": 30, "speed": 5.5, "incline": 12, "distance": 2.7 }`). Data from older versions is upgraded automatically on load (the Cardio day is added, and your history is kept).
+
 History is matched by **exercise name**. If you swap an exercise out and later swap it back, its history and auto-fill values return too.
+
+---
+
+## Credits
+
+- Exercise library data (names, muscles, equipment, instructions) comes from **[exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset)** by Hasan Emir Yıldırım, used under the MIT License:
+
+  > Copyright (c) 2026 Hasan Emir Yıldırım. Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation and data files (the "Software"), to deal in the Software without restriction… The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+  The full license text is in [`src/data/EXERCISE-DATA-LICENSE.txt`](src/data/EXERCISE-DATA-LICENSE.txt).
+- Exercise animations and thumbnails are **© Gym visual — https://gymvisual.com/**, hosted in the exercises-dataset repo with the rights holder's permission. Gym visual's terms prohibit redistribution, so this repo and its build **do not contain any of the media**. The app loads each GIF from the dataset repo at runtime (180×180, with attribution shown next to it), and the service worker keeps a per-device cache for offline use. See [`src/data/media.js`](src/data/media.js).
+- The session summary, personal records, streak/consistency stats and activity calendar are adapted from ideas in **[LogPress](https://github.com/hasaneyldrm/logpress-public)** by Hasan Emir Yıldırım (MIT). They were reimplemented for this offline web app, and streaks are counted weekly so rest days don't break them.

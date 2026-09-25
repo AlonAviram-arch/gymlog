@@ -22,8 +22,14 @@ export default function ProgressChart({ points, unitLabel }) {
   let min = Math.max(0, Math.floor(lo / step) * step)
   let max = min + step * 2
   while (max < hi) max += step * 2
-  if (lo === min && min >= step) min -= step
-  if (hi === max) max += step
+  if (lo === hi) {
+    // Single value: center it (29 / 30 / 31).
+    min = Math.max(0, lo - step)
+    max = min + step * 2
+  } else {
+    if (lo === min && min >= step) min -= step
+    if (hi === max) max += step
+  }
 
   const iw = W - PAD.l - PAD.r
   const ih = H - PAD.t - PAD.b
@@ -66,21 +72,20 @@ export default function ProgressChart({ points, unitLabel }) {
           </g>
         ))}
         {[...labelIdx].map((i) => (
-          <text key={i} x={x(i)} y={H - 8} textAnchor={points.length === 1 ? 'middle' : i === 0 ? 'start' : 'end'} className="fill-zinc-500 text-[10px]">
+          <text
+            key={i}
+            x={x(i)}
+            y={H - 8}
+            textAnchor={points.length === 1 ? 'middle' : i === 0 ? 'start' : 'end'}
+            className="fill-zinc-500 text-[10px]"
+          >
             {fmtDate(points[i].ts)}
           </text>
         ))}
         {hp && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={PAD.t + ih} className="stroke-zinc-600" strokeDasharray="3 3" />}
         <path d={path} fill="none" className="stroke-emerald-400" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={x(i)}
-            cy={y(p.value)}
-            r={hover === i ? 6 : 4}
-            className="fill-emerald-400 stroke-zinc-900"
-            strokeWidth="2"
-          />
+          <circle key={i} cx={x(i)} cy={y(p.value)} r={hover === i ? 6 : 4} className="fill-emerald-400 stroke-zinc-900" strokeWidth="2" />
         ))}
       </svg>
       {hp && (

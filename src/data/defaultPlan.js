@@ -1,6 +1,7 @@
 // Rest is stored in seconds. `superset` groups adjacent exercises visually;
 // the first movement in a superset has 0 rest (go straight to the second one).
 // `unit` is 'reps' or 'sec' (timed holds). `defaultWeight` pre-fills the first session.
+// `type: 'cardio'` exercises log `metrics` (see data/cardio.js) per round instead of kg × reps.
 
 const ex = (id, name, muscle, sets, reps, rest, extra = {}) => ({
   id,
@@ -63,6 +64,17 @@ export const DEFAULT_PLAN = [
       ex('h-1', 'Dumbbell Wrist Curls (Palms Up)', 'forearms', 3, '15-20', 60, { defaultWeight: 10 }),
       ex('h-2', 'Reverse DB Wrist Curls (Palms Down)', 'forearms', 3, '15-20', 60, { defaultWeight: 10 }),
       ex('h-3', "Dumbbell Farmer's Holds / Carries", 'forearms', 3, '45-60s', 60, { unit: 'sec', defaultWeight: 10 }),
+    ],
+  },
+  {
+    id: 'cardio',
+    name: 'Cardio',
+    title: 'Treadmill & Conditioning',
+    exercises: [
+      ex('c-1', 'Treadmill Incline Walk', 'cardio', 1, '30 min', 0, {
+        type: 'cardio',
+        metrics: ['duration', 'speed', 'incline', 'distance'],
+      }),
     ],
   },
 ]

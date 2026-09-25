@@ -3,7 +3,8 @@ import { playDoubleBeep, unlockAudio, vibrate } from '../lib/alerts'
 
 // Timestamp-based countdown, so it stays accurate when the tab is throttled.
 // status: 'idle' | 'running' | 'paused' | 'done'
-const IDLE = { status: 'idle', endAt: 0, remaining: 0, duration: 0, label: '' }
+// kind: 'rest' (between sets) | 'cardio' (countdown for a timed cardio block)
+const IDLE = { status: 'idle', endAt: 0, remaining: 0, duration: 0, label: '', kind: 'rest' }
 
 export function useRestTimer(settings) {
   const [t, setT] = useState(IDLE)
@@ -48,10 +49,10 @@ export function useRestTimer(settings) {
     }
   }, [t.status])
 
-  const start = useCallback((seconds, label = '') => {
+  const start = useCallback((seconds, label = '', kind = 'rest') => {
     if (!seconds) return
     unlockAudio() // we're inside a tap handler – unlock audio for the later beep
-    setT({ status: 'running', endAt: Date.now() + seconds * 1000, remaining: seconds * 1000, duration: seconds * 1000, label })
+    setT({ status: 'running', endAt: Date.now() + seconds * 1000, remaining: seconds * 1000, duration: seconds * 1000, label, kind })
   }, [])
 
   const adjust = useCallback((seconds) => {

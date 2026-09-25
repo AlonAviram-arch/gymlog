@@ -4,7 +4,7 @@ import { DEFAULT_PLAN } from '../data/defaultPlan'
 import { toNum, uid } from './format'
 
 const KEY = 'gymlog:v1'
-const VERSION = 1
+const VERSION = 2
 
 const clone = (x) => JSON.parse(JSON.stringify(x))
 
@@ -13,14 +13,23 @@ export function initialState() {
     version: VERSION,
     plan: clone(DEFAULT_PLAN),
     customExercises: [],
-    history: [], // chronological: [{ id, dayId, dayName, startedAt, finishedAt, exercises: [{ name, muscle, unit, sets: [{ weight, reps }] }] }]
-    active: null, // { dayId, startedAt, logs: { [exerciseId]: [{ weight, reps, done }] } }
-    settings: { sound: true, vibrate: true },
+    // chronological: [{ id, dayId, dayName, startedAt, finishedAt, exercises: [{ name, muscle, unit, type, metrics, sets: [{ weight, reps } | { duration, speed, … }] }] }]
+    history: [],
+    active: null, // { dayId, startedAt, logs: { [exerciseId]: [{ weight, reps, done } | { duration, …, done }] } }
+    settings: { sound: true, vibrate: true, weeklyGoal: 3 },
   }
+}
+
+/** Upgrades data saved by older app versions. */
+function migrate(plan, fromVersion) {
+  // v2: add the Cardio day.
+  if (fromVersion < 2 && !plan.some((d) => d.id === 'cardio')) plan = [...plan, clone(DEFAULT_PLAN.find((d) => d.id === 'cardio'))]
+  return plan
 }
 
 function normalize(data) {
   const base = initialState()
+  const plan = Array.isArray(data.plan) && data.plan.length ? migrate(data.plan, data.version ?? 1) : base.plan
   return {
     ...base,
     ...data,
@@ -28,7 +37,7 @@ function normalize(data) {
     settings: { ...base.settings, ...(data.settings ?? {}) },
     customExercises: Array.isArray(data.customExercises) ? data.customExercises : [],
     history: Array.isArray(data.history) ? data.history : [],
-    plan: Array.isArray(data.plan) && data.plan.length ? data.plan : base.plan,
+    plan,
   }
 }
 
@@ -69,14 +78,24 @@ export function lastSessionSets(history, name) {
   return null
 }
 
+/** Logged fields per set: kg × reps for strength, the chosen metrics for cardio. */
+export const fieldsOf = (ex) => (ex.type === 'cardio' ? (ex.metrics?.length ? ex.metrics : ['duration']) : ['weight', 'reps'])
+
+/** Copy of a set's values (as input strings) with done reset. */
+function carry(fields, src, ex) {
+  const row = { done: false }
+  for (const f of fields) {
+    const v = src ? src[f] : f === 'weight' ? ex.defaultWeight : null
+    row[f] = v != null ? String(v) : ''
+  }
+  return row
+}
+
 /** Initial set rows for an exercise, auto-filled from the previous session. */
 export function prefillSets(ex, history) {
   const last = lastSessionSets(history, ex.name)
-  return Array.from({ length: ex.sets }, (_, i) => {
-    const src = last ? (last[i] ?? last[last.length - 1]) : null
-    const weight = src ? src.weight : ex.defaultWeight
-    return { weight: weight != null ? String(weight) : '', reps: src?.reps != null ? String(src.reps) : '', done: false }
-  })
+  const fields = fieldsOf(ex)
+  return Array.from({ length: ex.sets }, (_, i) => carry(fields, last ? (last[i] ?? last[last.length - 1]) : null, ex))
 }
 
 export function setsFor(state, dayId, ex) {
@@ -100,8 +119,7 @@ export const updateSet = (s, dayId, ex, idx, patch) =>
 
 export const addSet = (s, dayId, ex) =>
   withSets(s, dayId, ex, (sets) => {
-    const last = sets[sets.length - 1]
-    return [...sets, { weight: last?.weight ?? '', reps: last?.reps ?? '', done: false }]
+    return [...sets, carry(fieldsOf(ex), sets[sets.length - 1] ?? null, ex)]
   })
 
 export const removeSet = (s, dayId, ex) => withSets(s, dayId, ex, (sets) => (sets.length > 1 ? sets.slice(0, -1) : sets))
@@ -111,12 +129,16 @@ export function finishWorkout(s) {
   if (!a) return s
   const day = s.plan.find((d) => d.id === a.dayId)
   const exercises = (day?.exercises ?? [])
-    .map((ex) => ({
-      name: ex.name,
-      muscle: ex.muscle,
-      unit: ex.unit,
-      sets: (a.logs[ex.id] ?? []).filter((x) => x.done).map((x) => ({ weight: toNum(x.weight), reps: toNum(x.reps) })),
-    }))
+    .map((ex) => {
+      const fields = fieldsOf(ex)
+      return {
+        name: ex.name,
+        muscle: ex.muscle,
+        unit: ex.unit,
+        ...(ex.type === 'cardio' ? { type: 'cardio', metrics: fields } : {}),
+        sets: (a.logs[ex.id] ?? []).filter((x) => x.done).map((x) => Object.fromEntries(fields.map((f) => [f, toNum(x[f])]))),
+      }
+    })
     .filter((e) => e.sets.length)
   if (!exercises.length) return { ...s, active: null }
   const entry = {
@@ -143,7 +165,11 @@ function dropLog(s, exId) {
   return { ...s, active: { ...s.active, logs } }
 }
 
-export const removeExercise = (s, dayId, exId) => dropLog(mapDay(s, dayId, (list) => list.filter((e) => e.id !== exId)), exId)
+export const removeExercise = (s, dayId, exId) =>
+  dropLog(
+    mapDay(s, dayId, (list) => list.filter((e) => e.id !== exId)),
+    exId,
+  )
 
 export const moveExercise = (s, dayId, exId, dir) =>
   mapDay(s, dayId, (list) => {
@@ -155,8 +181,7 @@ export const moveExercise = (s, dayId, exId, dir) =>
     return next
   })
 
-export const addExercise = (s, dayId, data) =>
-  mapDay(s, dayId, (list) => [...list, { unit: 'reps', superset: null, ...data, id: uid() }])
+export const addExercise = (s, dayId, data) => mapDay(s, dayId, (list) => [...list, { unit: 'reps', superset: null, ...data, id: uid() }])
 
 /** Edit targets (sets/reps/rest/name…). Renaming resets the in-progress log; changing sets resizes it. */
 export function updateExercise(s, dayId, exId, patch) {
@@ -167,16 +192,25 @@ export function updateExercise(s, dayId, exId, patch) {
   const log = next.active?.dayId === dayId ? next.active.logs[exId] : null
   if (log && patch.sets && patch.sets !== log.length) {
     const last = log[log.length - 1]
-    const resized = Array.from({ length: patch.sets }, (_, i) => log[i] ?? { weight: last.weight, reps: last.reps, done: false })
+    const resized = Array.from({ length: patch.sets }, (_, i) => log[i] ?? { ...last, done: false })
     return { ...next, active: { ...next.active, logs: { ...next.active.logs, [exId]: resized } } }
   }
   return next
 }
 
-/** Swap to an alternative movement: keeps sets/reps/rest/superset, gets a fresh id + log. */
-export const replaceExercise = (s, dayId, exId, name, muscle) =>
+/**
+ * Swap to an alternative movement: keeps sets/reps/rest/superset, gets a fresh id + log.
+ * `patch` may carry extra fields (e.g. type/metrics when swapping strength ↔ cardio).
+ */
+export const replaceExercise = (s, dayId, exId, name, muscle, patch = {}) =>
   dropLog(
-    mapDay(s, dayId, (list) => list.map((e) => (e.id === exId ? { ...e, id: uid(), name, muscle: muscle ?? e.muscle, defaultWeight: undefined } : e))),
+    mapDay(s, dayId, (list) =>
+      list.map((e) =>
+        e.id === exId
+          ? { ...e, id: uid(), name, muscle: muscle ?? e.muscle, defaultWeight: undefined, media: null, libId: undefined, ...patch }
+          : e,
+      ),
+    ),
     exId,
   )
 

@@ -31,6 +31,19 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: 'index.html',
+        // Exercise demo GIFs/thumbnails are loaded from the dataset repo at runtime and kept
+        // in a per-device cache (never bundled — see src/data/media.js).
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/raw\.githubusercontent\.com\/hasaneyldrm\/exercises-dataset\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-media',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
       },
     }),
   ],

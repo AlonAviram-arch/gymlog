@@ -1,11 +1,10 @@
-import { ArrowDown, ArrowUp, Check, Minus, Pencil, Plus, Shuffle, Timer, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Hourglass, Minus, Pencil, Plus, Shuffle, Timer, Trash2 } from 'lucide-react'
 import { muscleLabel } from '../data/muscles'
-import { fmtRest } from '../lib/format'
-
-function lastSummary(last, unit) {
-  if (!last?.length) return null
-  return last.map((s) => `${s.weight ?? '–'}×${s.reps ?? '–'}${unit === 'sec' ? 's' : ''}`).join(', ')
-}
+import { CARDIO_METRICS, targetMinutes } from '../data/cardio'
+import { fmtRest, fmtSetShort } from '../lib/format'
+import { fieldsOf } from '../lib/store'
+import { mediaFor } from '../data/media'
+import { Thumb } from './ExerciseMedia'
 
 export default function ExerciseCard({
   ex,
@@ -18,26 +17,34 @@ export default function ExerciseCard({
   onChangeSet,
   onToggleDone,
   onStartRest,
+  onStartCountdown,
   onAddSet,
   onRemoveSet,
   onSuggest,
+  onDemo,
   onMove,
   onEdit,
   onRemove,
 }) {
   const doneCount = sets.filter((s) => s.done).length
   const allDone = doneCount === sets.length && sets.length > 0
-  const summary = lastSummary(last, ex.unit)
+  const cardio = ex.type === 'cardio'
+  const summary = last?.length ? last.map((s) => fmtSetShort(s, ex)).join(', ') : null
+  const countdown = cardio ? targetMinutes(ex.reps) : null
+  const setWord = cardio ? 'Round' : 'Set'
 
   return (
     <article className={`rounded-2xl border p-3.5 ${allDone ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900'}`}>
-      <header className="flex items-start gap-2">
+      <header className="flex items-start gap-3">
+        {mediaFor(ex) && (
+          <button onClick={onDemo} className="relative shrink-0" aria-label={`Watch ${ex.name} demo`}>
+            <Thumb media={mediaFor(ex)} size={52} />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="text-[17px] leading-snug font-semibold">{ex.name}</h3>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
-            <span className="font-medium text-zinc-200">
-              {ex.sets} × {ex.reps}
-            </span>
+            <span className="font-medium text-zinc-200">{cardio && ex.sets === 1 ? ex.reps : `${ex.sets} × ${ex.reps}`}</span>
             <span className="text-zinc-600">•</span>
             <span>{muscleLabel(ex.muscle)}</span>
           </div>
@@ -49,16 +56,27 @@ export default function ExerciseCard({
         )}
       </header>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          onClick={onStartRest}
-          disabled={!ex.rest}
-          className="flex h-10 items-center gap-1.5 rounded-full bg-cyan-500/10 px-3.5 text-sm font-medium text-cyan-300 active:bg-cyan-500/20 disabled:bg-zinc-800 disabled:text-zinc-500"
-          aria-label={`Start ${fmtRest(ex.rest)} rest timer`}
-        >
-          <Timer size={16} />
-          {ex.rest ? `Rest ${fmtRest(ex.rest)}` : 'No rest → next'}
-        </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {countdown && (
+          <button
+            onClick={() => onStartCountdown(countdown * 60)}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-cyan-500/10 px-3.5 text-sm font-medium text-cyan-300 active:bg-cyan-500/20"
+          >
+            <Hourglass size={16} />
+            Timer {countdown} min
+          </button>
+        )}
+        {(!cardio || ex.rest > 0) && (
+          <button
+            onClick={onStartRest}
+            disabled={!ex.rest}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-cyan-500/10 px-3.5 text-sm font-medium text-cyan-300 active:bg-cyan-500/20 disabled:bg-zinc-800 disabled:text-zinc-500"
+            aria-label={`Start ${fmtRest(ex.rest)} rest timer`}
+          >
+            <Timer size={16} />
+            {ex.rest ? `Rest ${fmtRest(ex.rest)}` : 'No rest → next'}
+          </button>
+        )}
         <button
           onClick={onSuggest}
           className="flex h-10 items-center gap-1.5 rounded-full bg-zinc-800 px-3.5 text-sm font-medium text-zinc-300 active:bg-zinc-700"
@@ -87,32 +105,59 @@ export default function ExerciseCard({
                 <span className="w-6 shrink-0 text-center text-sm font-semibold text-zinc-500" aria-hidden="true">
                   {i + 1}
                 </span>
-                <NumInput
-                  value={s.weight}
-                  onChange={(v) => onChangeSet(i, { weight: v })}
-                  mode="decimal"
-                  label={`Set ${i + 1} weight`}
-                  disabled={disabled}
-                  done={s.done}
-                />
-                <span className="text-xs whitespace-nowrap text-zinc-500">kg ×</span>
-                <NumInput
-                  value={s.reps}
-                  onChange={(v) => onChangeSet(i, { reps: v })}
-                  mode="numeric"
-                  label={`Set ${i + 1} ${ex.unit === 'sec' ? 'seconds' : 'reps'}`}
-                  disabled={disabled}
-                  done={s.done}
-                  narrow
-                />
-                <span className="w-7 text-xs text-zinc-500">{ex.unit === 'sec' ? 'sec' : 'reps'}</span>
+                {cardio ? (
+                  <div
+                    className="grid min-w-0 flex-1 gap-1"
+                    // 1–3 fields in one row; 4 as 2×2; 5–6 as 3 per row.
+                    style={{ gridTemplateColumns: `repeat(${cardioCols(fieldsOf(ex).length)}, minmax(0, 1fr))` }}
+                  >
+                    {fieldsOf(ex).map((m) => (
+                      <label key={m} className="min-w-0">
+                        <span className="block truncate text-center text-[10px] text-zinc-500 uppercase">
+                          {CARDIO_METRICS[m]?.label ?? m} <span className="normal-case">{CARDIO_METRICS[m]?.unit}</span>
+                        </span>
+                        <NumInput
+                          value={s[m] ?? ''}
+                          onChange={(v) => onChangeSet(i, { [m]: v })}
+                          mode={CARDIO_METRICS[m]?.mode ?? 'decimal'}
+                          label={`Round ${i + 1} ${CARDIO_METRICS[m]?.label ?? m}`}
+                          disabled={disabled}
+                          done={s.done}
+                          fluid
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <NumInput
+                      value={s.weight}
+                      onChange={(v) => onChangeSet(i, { weight: v })}
+                      mode="decimal"
+                      label={`Set ${i + 1} weight`}
+                      disabled={disabled}
+                      done={s.done}
+                    />
+                    <span className="text-xs whitespace-nowrap text-zinc-500">kg ×</span>
+                    <NumInput
+                      value={s.reps}
+                      onChange={(v) => onChangeSet(i, { reps: v })}
+                      mode="numeric"
+                      label={`Set ${i + 1} ${ex.unit === 'sec' ? 'seconds' : 'reps'}`}
+                      disabled={disabled}
+                      done={s.done}
+                      narrow
+                    />
+                    <span className="w-7 text-xs text-zinc-500">{ex.unit === 'sec' ? 'sec' : 'reps'}</span>
+                  </>
+                )}
                 <button
                   onClick={() => onToggleDone(i)}
                   disabled={disabled}
                   className={`ml-auto grid h-12 w-12 shrink-0 place-items-center rounded-xl border-2 transition ${
                     s.done ? 'border-emerald-500 bg-emerald-500 text-zinc-950' : 'border-zinc-600 text-zinc-500 active:bg-zinc-700'
                   } disabled:opacity-40`}
-                  aria-label={s.done ? `Undo set ${i + 1}` : `Complete set ${i + 1}`}
+                  aria-label={s.done ? `Undo ${setWord.toLowerCase()} ${i + 1}` : `Complete ${setWord.toLowerCase()} ${i + 1}`}
                   aria-pressed={s.done}
                 >
                   <Check size={24} strokeWidth={3} />
@@ -126,14 +171,14 @@ export default function ExerciseCard({
               disabled={disabled || sets.length <= 1}
               className="flex h-9 items-center gap-1 rounded-lg px-2.5 text-xs text-zinc-400 active:bg-zinc-800 disabled:opacity-30"
             >
-              <Minus size={14} /> Set
+              <Minus size={14} /> {setWord}
             </button>
             <button
               onClick={onAddSet}
               disabled={disabled}
               className="flex h-9 items-center gap-1 rounded-lg px-2.5 text-xs text-zinc-400 active:bg-zinc-800 disabled:opacity-30"
             >
-              <Plus size={14} /> Set
+              <Plus size={14} /> {setWord}
             </button>
           </div>
         </>
@@ -142,7 +187,9 @@ export default function ExerciseCard({
   )
 }
 
-function NumInput({ value, onChange, mode, label, disabled, done, narrow }) {
+const cardioCols = (n) => (n <= 3 ? n : n === 4 ? 2 : 3)
+
+function NumInput({ value, onChange, mode, label, disabled, done, narrow, fluid }) {
   return (
     <input
       type="text"
@@ -154,7 +201,7 @@ function NumInput({ value, onChange, mode, label, disabled, done, narrow }) {
       disabled={disabled}
       onFocus={(e) => e.target.select()}
       onChange={(e) => onChange(e.target.value.replace(/[^0-9.,]/g, ''))}
-      className={`h-12 ${narrow ? 'w-13' : 'w-16'} shrink-0 rounded-lg border bg-zinc-950 text-center text-lg font-semibold tabular-nums outline-none focus:border-emerald-500 ${
+      className={`h-12 ${fluid ? 'w-full' : narrow ? 'w-13' : 'w-16'} shrink-0 rounded-lg border bg-zinc-950 text-center text-lg font-semibold tabular-nums outline-none focus:border-emerald-500 ${
         done ? 'border-emerald-500/30 text-emerald-200' : 'border-zinc-700 text-zinc-100'
       } disabled:opacity-40`}
     />

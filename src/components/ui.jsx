@@ -65,7 +65,11 @@ export function Toggle({ checked, onChange, label, icon: Icon }) {
 
 export function SettingsButton({ onClick }) {
   return (
-    <button onClick={onClick} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-zinc-900 text-zinc-300" aria-label="Settings">
+    <button
+      onClick={onClick}
+      className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-zinc-900 text-zinc-300"
+      aria-label="Settings"
+    >
       <Settings size={22} />
     </button>
   )

@@ -1,9 +1,9 @@
-import { Dumbbell, History, ListPlus } from 'lucide-react'
+import { Dumbbell, History, Library } from 'lucide-react'
 
 const TABS = [
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
   { id: 'history', label: 'History', icon: History },
-  { id: 'custom', label: 'Custom Exercises', icon: ListPlus },
+  { id: 'library', label: 'Exercises', icon: Library },
 ]
 
 export default function BottomNav({ tab, onChange }) {

@@ -1,26 +1,19 @@
 import { useState } from 'react'
-import { ListPlus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { HeartPulse, ListPlus, Pencil, Plus, Trash2 } from 'lucide-react'
 import * as A from '../lib/store'
 import { muscleLabel } from '../data/muscles'
 import { fmtRest } from '../lib/format'
 import ExerciseForm from './ExerciseForm'
-import { SettingsButton, Sheet } from './ui'
+import { Sheet } from './ui'
 
-export default function CustomTab({ state, act, onOpenSettings }) {
+/** The user's own exercise library (the "My Custom" half of the Exercises tab). */
+export default function CustomExercises({ state, act }) {
   const [form, setForm] = useState(null) // { mode: 'new' } | { mode: 'edit', item }
   const [adding, setAdding] = useState(null) // custom exercise being added to a day
   const [added, setAdded] = useState('')
 
   return (
     <>
-      <header className="flex items-center justify-between pt-2 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Custom Exercises</h1>
-          <p className="text-sm text-zinc-400">Your own movements, ready to add to any day</p>
-        </div>
-        <SettingsButton onClick={onOpenSettings} />
-      </header>
-
       <button
         onClick={() => setForm({ mode: 'new' })}
         className="mb-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-lg font-semibold text-zinc-950"
@@ -39,15 +32,25 @@ export default function CustomTab({ state, act, onOpenSettings }) {
         <ul className="space-y-2">
           {state.customExercises.map((c) => (
             <li key={c.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-              <div className="font-semibold">{c.name}</div>
+              <div className="flex items-center gap-2 font-semibold">
+                {c.type === 'cardio' && <HeartPulse size={16} className="shrink-0 text-cyan-400" />}
+                {c.name}
+              </div>
               <div className="mt-0.5 text-sm text-zinc-400">
-                {c.sets} × {c.reps} · Rest {fmtRest(c.rest)} · {muscleLabel(c.muscle)}
+                {c.sets} × {c.reps} · Rest {fmtRest(c.rest)} · {c.type === 'cardio' ? 'Cardio' : muscleLabel(c.muscle)}
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={() => setAdding(c)} className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-cyan-500/15 text-sm font-semibold text-cyan-300">
+                <button
+                  onClick={() => setAdding(c)}
+                  className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-cyan-500/15 text-sm font-semibold text-cyan-300"
+                >
                   <Plus size={16} /> Add to day
                 </button>
-                <button onClick={() => setForm({ mode: 'edit', item: c })} className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-300" aria-label="Edit">
+                <button
+                  onClick={() => setForm({ mode: 'edit', item: c })}
+                  className="grid h-11 w-11 place-items-center rounded-xl bg-zinc-800 text-zinc-300"
+                  aria-label="Edit"
+                >
                   <Pencil size={18} />
                 </button>
                 <button
