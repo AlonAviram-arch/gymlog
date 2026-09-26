@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "icons": "node scripts/generate-icons.mjs",
-    "build:exercises": "node scripts/build-exercise-db.mjs"
+    "build:exercises": "node scripts/build-exercise-db.mjs",
+    "build:movements": "node scripts/build-movements.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

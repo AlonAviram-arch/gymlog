@@ -9,6 +9,9 @@ A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It
 | Area | What you get |
 | --- | --- |
 | **Pre-loaded program** | A 3-day full-body split, a home forearm routine and a cardio day, ready to use on first launch. |
+| **Programs** | 11 ready-made plans: Full Body 2×/3×, Upper/Lower 4×, Push/Pull/Legs 3× and 6×, Body-Part Split 5×, Glutes & Lower-Body Focus, Strength Basics A/B, Dumbbell Full Body, Bodyweight Anywhere, and Lift + Cardio Hybrid. Filter by days/week, goal and the equipment you have. Every program adapts to **full gym, dumbbells only, or bodyweight**, and sets/reps/rest adapt to your goal (muscle, strength, general fitness, conditioning). Use one as your plan, or add its days to your current plan. |
+| **Workout builder** | Build a single session by focus (Full Body, Upper, Lower, Push, Pull, Legs, Glutes, Chest & Back, Shoulders, Arms, Core, Conditioning), equipment, goal and length. Reshuffle one exercise or all of them, then add it to your plan. |
+| **Multiple plans** | Switching to a program saves your current plan under **My plans**, so you can switch back anytime. Rename plans, and rename, delete or add days. |
 | **Exercise library** | 1,300+ exercises from the [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset), plus common gym cardio. Search by name, **filter by muscle** (optionally including secondary muscles) and **by equipment** (30 types), read step-by-step instructions, and add any exercise to any day. |
 | **Exercise demos** | Animated GIF demos in the library, and a thumbnail on every workout card. Tap it for the demo plus step-by-step instructions. Demos you open (or all your plan's demos, from Settings) are cached for offline use. |
 | **Workout complete** | After finishing: duration, sets, volume vs. last time, a fun weight comparison, and any **personal records** (heaviest weight or best estimated 1RM). A live session clock runs while you train. |
@@ -41,9 +44,9 @@ A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It
 
 ---
 
-## The program
+## The default program
 
-Rest times are the prescribed defaults. You can edit them in the app.
+This is the plan the app starts with (**My 3-Day Split**). Pick a different one anytime from **Workouts → Programs & workout builder**. Rest times are the prescribed defaults, and you can edit them in the app.
 
 ### Day 1: Quads, Chest, Hamstrings & Glutes
 
@@ -120,6 +123,7 @@ npm run build     # production build → dist/
 npm run preview   # serve the production build locally (service worker enabled)
 npm run icons     # regenerate the PNG app icons in public/
 npm run build:exercises   # re-download the exercise library into src/data/exerciseDb.json
+npm run build:movements   # regenerate src/data/movements.js (exercise options per movement pattern)
 ```
 
 > **Note:** browsers only enable service workers (offline mode and install) on **HTTPS** or `localhost`. The LAN `http://192.168…` address is fine for testing the UI. For a real home-screen install, deploy it (see below).
@@ -132,12 +136,15 @@ npm run build:exercises   # re-download the exercise library into src/data/exerc
 ├── public/                    # favicon.svg, pwa-192/512.png, apple-touch-icon.png
 ├── scripts/generate-icons.mjs # zero-dependency PNG icon generator
 ├── scripts/build-exercise-db.mjs # builds the exercise library (text + media ids) from the dataset
+├── scripts/build-movements.mjs   # curated exercise options per movement pattern → src/data/movements.js
 ├── .github/workflows/deploy.yml  # GitHub Pages deployment
 └── src/
     ├── App.jsx                # state, tabs, timer wiring
-    ├── data/                  # defaultPlan.js, alternatives.js, muscles.js, cardio.js,
+    ├── data/                  # defaultPlan.js, programs.js (program templates & focuses), movements.js,
+    │                          # alternatives.js, muscles.js, cardio.js, media.js,
     │                          # library.js + exerciseDb.json (the exercise library, lazy-loaded)
-    ├── lib/                   # store.js (state + actions), stats.js (PRs, streaks, calendar), alerts.js, format.js
+    ├── lib/                   # store.js (state + actions), generator.js (programs → plan days),
+    │                          # stats.js (PRs, streaks, calendar), alerts.js, format.js
     ├── hooks/useRestTimer.js  # timestamp-based countdown, alerts, wake lock
     └── components/            # WorkoutsTab, ExerciseCard, RestTimerBar, HistoryTab, ProgressChart,
                                # ExercisesTab, ExerciseBrowser, CustomExercises, AlternativesSheet,

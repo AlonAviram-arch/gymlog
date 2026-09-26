@@ -7,11 +7,14 @@ const KEY = 'gymlog:v1'
 const VERSION = 2
 
 const clone = (x) => JSON.parse(JSON.stringify(x))
+export const DEFAULT_PLAN_NAME = 'My 3-Day Split'
 
 export function initialState() {
   return {
     version: VERSION,
     plan: clone(DEFAULT_PLAN),
+    planName: DEFAULT_PLAN_NAME,
+    savedPlans: [], // other plans you can switch back to: [{ id, name, days, savedAt }]
     customExercises: [],
     // chronological: [{ id, dayId, dayName, startedAt, finishedAt, exercises: [{ name, muscle, unit, type, metrics, sets: [{ weight, reps } | { duration, speed, … }] }] }]
     history: [],
@@ -29,7 +32,7 @@ function migrate(plan, fromVersion) {
 
 function normalize(data) {
   const base = initialState()
-  const plan = Array.isArray(data.plan) && data.plan.length ? migrate(data.plan, data.version ?? 1) : base.plan
+  const plan = Array.isArray(data.plan) ? migrate(data.plan, data.version ?? 1) : base.plan
   return {
     ...base,
     ...data,
@@ -37,6 +40,8 @@ function normalize(data) {
     settings: { ...base.settings, ...(data.settings ?? {}) },
     customExercises: Array.isArray(data.customExercises) ? data.customExercises : [],
     history: Array.isArray(data.history) ? data.history : [],
+    savedPlans: Array.isArray(data.savedPlans) ? data.savedPlans : [],
+    planName: data.planName || DEFAULT_PLAN_NAME,
     plan,
   }
 }
@@ -214,7 +219,60 @@ export const replaceExercise = (s, dayId, exId, name, muscle, patch = {}) =>
     exId,
   )
 
-export const resetPlan = (s) => ({ ...s, plan: clone(DEFAULT_PLAN), active: null })
+export const resetPlan = (s) => ({ ...s, plan: clone(DEFAULT_PLAN), planName: DEFAULT_PLAN_NAME, active: null })
+
+/* ---------- programs & multiple plans ---------- */
+
+/** Current plan → saved list (replacing a saved plan with the same name). */
+function stash(s) {
+  if (!s.plan.length) return s.savedPlans
+  const others = s.savedPlans.filter((p) => p.name !== s.planName)
+  return [{ id: uid(), name: s.planName, days: s.plan, savedAt: Date.now() }, ...others]
+}
+
+/** Make `days` the current plan; the old plan is kept in savedPlans. */
+export const applyPlan = (s, name, days) => ({
+  ...s,
+  savedPlans: stash(s).filter((p) => p.name !== name),
+  planName: name,
+  plan: days,
+  active: null,
+})
+
+/** Append days (a program's or a single generated workout) to the current plan. */
+export const appendDays = (s, days) => ({ ...s, plan: [...s.plan, ...days] })
+
+export const switchPlan = (s, savedId) => {
+  const target = s.savedPlans.find((p) => p.id === savedId)
+  if (!target) return s
+  return {
+    ...s,
+    savedPlans: stash(s).filter((p) => p.id !== savedId && p.name !== target.name),
+    planName: target.name,
+    plan: target.days,
+    active: null,
+  }
+}
+
+export const deleteSavedPlan = (s, savedId) => ({ ...s, savedPlans: s.savedPlans.filter((p) => p.id !== savedId) })
+export const renamePlan = (s, name) => ({ ...s, planName: name.trim() || s.planName })
+
+export const removeDay = (s, dayId) => ({
+  ...s,
+  plan: s.plan.filter((d) => d.id !== dayId),
+  active: s.active?.dayId === dayId ? null : s.active,
+})
+
+export const updateDay = (s, dayId, patch) => ({ ...s, plan: s.plan.map((d) => (d.id === dayId ? { ...d, ...patch } : d)) })
+
+export const moveDay = (s, dayId, dir) => {
+  const i = s.plan.findIndex((d) => d.id === dayId)
+  const j = i + dir
+  if (i < 0 || j < 0 || j >= s.plan.length) return s
+  const plan = [...s.plan]
+  ;[plan[i], plan[j]] = [plan[j], plan[i]]
+  return { ...s, plan }
+}
 
 /* ---------- custom exercises ---------- */
 

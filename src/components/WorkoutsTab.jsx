@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Flag, HeartPulse, Home, Link2, Pencil, Plus, RotateCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Flag, HeartPulse, Home, LayoutGrid, Link2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import * as A from '../lib/store'
 import { fmtAgo, fmtDuration } from '../lib/format'
 import { entryToExercise } from '../data/library'
@@ -8,10 +8,24 @@ import ExerciseBrowser, { PlanExerciseDemo } from './ExerciseBrowser'
 import { mediaFor } from '../data/media'
 import ExerciseCard from './ExerciseCard'
 import ExerciseForm from './ExerciseForm'
+import ProgramsView from './ProgramsView'
 import { SettingsButton, Sheet } from './ui'
 
 export default function WorkoutsTab({ state, act, timer, openDayId, setOpenDayId, onOpenSettings, onFinished }) {
+  const [programs, setPrograms] = useState(false)
   const day = state.plan.find((d) => d.id === openDayId)
+  if (programs)
+    return (
+      <ProgramsView
+        state={state}
+        act={act}
+        onBack={() => setPrograms(false)}
+        onOpenDay={(id) => {
+          setPrograms(false)
+          setOpenDayId(id)
+        }}
+      />
+    )
   if (day)
     return (
       <DayView
@@ -24,10 +38,10 @@ export default function WorkoutsTab({ state, act, timer, openDayId, setOpenDayId
         onFinished={onFinished}
       />
     )
-  return <DayList state={state} onOpen={setOpenDayId} onOpenSettings={onOpenSettings} />
+  return <DayList state={state} onOpen={setOpenDayId} onOpenSettings={onOpenSettings} onOpenPrograms={() => setPrograms(true)} />
 }
 
-function DayList({ state, onOpen, onOpenSettings }) {
+function DayList({ state, onOpen, onOpenSettings, onOpenPrograms }) {
   const activeDay = state.active && state.plan.find((d) => d.id === state.active.dayId)
   const lastDone = (dayId) => [...state.history].reverse().find((h) => h.dayId === dayId)?.finishedAt
 
@@ -38,7 +52,7 @@ function DayList({ state, onOpen, onOpenSettings }) {
           <h1 className="text-2xl font-bold tracking-tight">
             Gym<span className="text-emerald-400">Log</span>
           </h1>
-          <p className="text-sm text-zinc-400">3-day split · home forearms · cardio</p>
+          <p className="text-sm text-zinc-400">{state.planName}</p>
         </div>
         <SettingsButton onClick={onOpenSettings} />
       </header>
@@ -62,6 +76,24 @@ function DayList({ state, onOpen, onOpenSettings }) {
         </button>
       )}
 
+      <button
+        onClick={onOpenPrograms}
+        className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-left active:bg-cyan-500/15"
+      >
+        <LayoutGrid size={24} className="shrink-0 text-cyan-300" />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-cyan-200">Programs & workout builder</div>
+          <div className="text-sm text-zinc-400">Full body, upper/lower, PPL, glutes, home… or build one session</div>
+        </div>
+        <ChevronRight className="shrink-0 text-cyan-300/60" />
+      </button>
+
+      {!state.plan.length && (
+        <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-zinc-500">
+          Your plan is empty. Pick a program or build a workout above.
+        </p>
+      )}
+
       <ul className="space-y-3">
         {state.plan.map((d) => {
           const last = lastDone(d.id)
@@ -78,7 +110,7 @@ function DayList({ state, onOpen, onOpenSettings }) {
                     isHome || isCardio ? 'bg-cyan-500/15 text-cyan-300' : 'bg-emerald-500/15 text-emerald-300'
                   }`}
                 >
-                  {isHome ? <Home size={24} /> : isCardio ? <HeartPulse size={24} /> : d.name.replace(/\D/g, '') || d.name[0]}
+                  {isHome ? <Home size={24} /> : isCardio ? <HeartPulse size={24} /> : d.name.replace(/\D/g, '') || (d.title || d.name)[0]}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium tracking-wide text-zinc-500 uppercase">{d.name}</div>
@@ -291,12 +323,35 @@ function DayView({ day, state, act, timer, onBack, onOpenDay, onFinished }) {
       </div>
 
       {editing && (
-        <button
-          onClick={() => setPicking(true)}
-          className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700 font-semibold text-zinc-300 active:bg-zinc-900"
-        >
-          <Plus size={20} /> Add exercise
-        </button>
+        <>
+          <button
+            onClick={() => setPicking(true)}
+            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700 font-semibold text-zinc-300 active:bg-zinc-900"
+          >
+            <Plus size={20} /> Add exercise
+          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                const title = prompt('Day name', day.title)
+                if (title?.trim()) act(A.updateDay, day.id, { title: title.trim() })
+              }}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300"
+            >
+              <Pencil size={16} /> Rename day
+            </button>
+            <button
+              onClick={() => {
+                if (!confirm(`Delete "${day.title}" from your plan? Its workout history is kept.`)) return
+                act(A.removeDay, day.id)
+                onBack()
+              }}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-red-500/10 text-sm font-semibold text-red-400"
+            >
+              <Trash2 size={16} /> Delete day
+            </button>
+          </div>
+        </>
       )}
 
       {!editing && isActiveHere && (
