@@ -28,6 +28,13 @@ export function fmtAgo(ts) {
   return fmtDate(ts)
 }
 
+/** "Mon, Sep 22 · 4 days ago" */
+export function fmtWhen(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000)
+  const ago = days < 7 ? fmtAgo(ts) : days < 60 ? `${Math.round(days / 7)} wk ago` : `${Math.round(days / 30)} mo ago`
+  return `${fmtDate(ts, { weekday: 'short', month: 'short', day: 'numeric' })} · ${ago}`
+}
+
 export function fmtDuration(ms) {
   const min = Math.round(ms / 60000)
   if (min < 60) return `${min} min`

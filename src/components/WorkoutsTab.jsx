@@ -208,7 +208,7 @@ function DayView({ day, state, act, timer, onBack, onOpenDay, onFinished }) {
       key={ex.id}
       ex={ex}
       sets={A.setsFor(state, day.id, ex)}
-      last={A.lastSessionSets(state.history, ex.name)}
+      last={A.lastSession(state.history, ex.name)}
       editing={editing}
       disabled={blocked}
       isFirst={index(ex) === 0}

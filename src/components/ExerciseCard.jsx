@@ -1,7 +1,8 @@
-import { ArrowDown, ArrowUp, Check, Hourglass, Minus, Pencil, Plus, Shuffle, Timer, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, History, Hourglass, Minus, Pencil, Plus, Shuffle, Timer, Trash2 } from 'lucide-react'
 import { muscleLabel } from '../data/muscles'
 import { CARDIO_METRICS, targetMinutes } from '../data/cardio'
-import { fmtRest, fmtSetShort } from '../lib/format'
+import { fmtRest, fmtSetShort, fmtWhen } from '../lib/format'
+import { compareSet } from '../lib/benchmark'
 import { fieldsOf } from '../lib/store'
 import { mediaFor } from '../data/media'
 import { Thumb } from './ExerciseMedia'
@@ -29,7 +30,6 @@ export default function ExerciseCard({
   const doneCount = sets.filter((s) => s.done).length
   const allDone = doneCount === sets.length && sets.length > 0
   const cardio = ex.type === 'cardio'
-  const summary = last?.length ? last.map((s) => fmtSetShort(s, ex)).join(', ') : null
   const countdown = cardio ? targetMinutes(ex.reps) : null
   const setWord = cardio ? 'Round' : 'Set'
 
@@ -95,75 +95,104 @@ export default function ExerciseCard({
         </div>
       ) : (
         <>
-          {summary && <p className="mt-3 truncate text-xs text-zinc-500">Last: {summary}</p>}
-          <ol className="mt-2 space-y-1.5">
-            {sets.map((s, i) => (
-              <li
-                key={i}
-                className={`flex items-center gap-1 rounded-xl py-1 pr-1 pl-2 ${s.done ? 'bg-emerald-500/10' : 'bg-zinc-800/40'}`}
-              >
-                <span className="w-6 shrink-0 text-center text-sm font-semibold text-zinc-500" aria-hidden="true">
-                  {i + 1}
+          {last ? (
+            <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
+                  <History size={13} /> Last time
                 </span>
-                {cardio ? (
-                  <div
-                    className="grid min-w-0 flex-1 gap-1"
-                    // 1–3 fields in one row; 4 as 2×2; 5–6 as 3 per row.
-                    style={{ gridTemplateColumns: `repeat(${cardioCols(fieldsOf(ex).length)}, minmax(0, 1fr))` }}
-                  >
-                    {fieldsOf(ex).map((m) => (
-                      <label key={m} className="min-w-0">
-                        <span className="block truncate text-center text-[10px] text-zinc-500 uppercase">
-                          {CARDIO_METRICS[m]?.label ?? m} <span className="normal-case">{CARDIO_METRICS[m]?.unit}</span>
-                        </span>
+                <span className="truncate text-zinc-500">{fmtWhen(last.finishedAt)}</span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {last.sets.map((p, i) => (
+                  <span key={i} className="rounded-md bg-zinc-800 px-2 py-0.5 text-[13px] font-medium text-zinc-200 tabular-nums">
+                    {fmtSetShort(p, ex)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-zinc-500">First time logging this. Today sets your benchmark.</p>
+          )}
+          <ol className="mt-2 space-y-1.5">
+            {sets.map((s, i) => {
+              const prev = last?.sets[i] ?? null
+              const cmp = compareSet(s, prev, ex)
+              return (
+                <li key={i} className={`rounded-xl py-1 pr-1 pl-2 ${s.done ? 'bg-emerald-500/10' : 'bg-zinc-800/40'}`}>
+                  <div className="flex items-center gap-1">
+                    <span className="w-6 shrink-0 text-center text-sm font-semibold text-zinc-500" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    {cardio ? (
+                      <div
+                        className="grid min-w-0 flex-1 gap-1"
+                        // 1–3 fields in one row; 4 as 2×2; 5–6 as 3 per row.
+                        style={{ gridTemplateColumns: `repeat(${cardioCols(fieldsOf(ex).length)}, minmax(0, 1fr))` }}
+                      >
+                        {fieldsOf(ex).map((m) => (
+                          <label key={m} className="min-w-0">
+                            <span className="block truncate text-center text-[10px] text-zinc-500 uppercase">
+                              {CARDIO_METRICS[m]?.label ?? m} <span className="normal-case">{CARDIO_METRICS[m]?.unit}</span>
+                            </span>
+                            <NumInput
+                              value={s[m] ?? ''}
+                              onChange={(v) => onChangeSet(i, { [m]: v })}
+                              mode={CARDIO_METRICS[m]?.mode ?? 'decimal'}
+                              label={`Round ${i + 1} ${CARDIO_METRICS[m]?.label ?? m}`}
+                              disabled={disabled}
+                              done={s.done}
+                              fluid
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
                         <NumInput
-                          value={s[m] ?? ''}
-                          onChange={(v) => onChangeSet(i, { [m]: v })}
-                          mode={CARDIO_METRICS[m]?.mode ?? 'decimal'}
-                          label={`Round ${i + 1} ${CARDIO_METRICS[m]?.label ?? m}`}
+                          value={s.weight}
+                          onChange={(v) => onChangeSet(i, { weight: v })}
+                          mode="decimal"
+                          label={`Set ${i + 1} weight`}
                           disabled={disabled}
                           done={s.done}
-                          fluid
                         />
-                      </label>
-                    ))}
+                        <span className="text-xs whitespace-nowrap text-zinc-500">kg ×</span>
+                        <NumInput
+                          value={s.reps}
+                          onChange={(v) => onChangeSet(i, { reps: v })}
+                          mode="numeric"
+                          label={`Set ${i + 1} ${ex.unit === 'sec' ? 'seconds' : 'reps'}`}
+                          disabled={disabled}
+                          done={s.done}
+                          narrow
+                        />
+                        <span className="w-7 text-xs text-zinc-500">{ex.unit === 'sec' ? 'sec' : 'reps'}</span>
+                      </>
+                    )}
+                    <button
+                      onClick={() => onToggleDone(i)}
+                      disabled={disabled}
+                      className={`ml-auto grid h-12 w-12 shrink-0 place-items-center rounded-xl border-2 transition ${
+                        s.done ? 'border-emerald-500 bg-emerald-500 text-zinc-950' : 'border-zinc-600 text-zinc-500 active:bg-zinc-700'
+                      } disabled:opacity-40`}
+                      aria-label={s.done ? `Undo ${setWord.toLowerCase()} ${i + 1}` : `Complete ${setWord.toLowerCase()} ${i + 1}`}
+                      aria-pressed={s.done}
+                    >
+                      <Check size={24} strokeWidth={3} />
+                    </button>
                   </div>
-                ) : (
-                  <>
-                    <NumInput
-                      value={s.weight}
-                      onChange={(v) => onChangeSet(i, { weight: v })}
-                      mode="decimal"
-                      label={`Set ${i + 1} weight`}
-                      disabled={disabled}
-                      done={s.done}
-                    />
-                    <span className="text-xs whitespace-nowrap text-zinc-500">kg ×</span>
-                    <NumInput
-                      value={s.reps}
-                      onChange={(v) => onChangeSet(i, { reps: v })}
-                      mode="numeric"
-                      label={`Set ${i + 1} ${ex.unit === 'sec' ? 'seconds' : 'reps'}`}
-                      disabled={disabled}
-                      done={s.done}
-                      narrow
-                    />
-                    <span className="w-7 text-xs text-zinc-500">{ex.unit === 'sec' ? 'sec' : 'reps'}</span>
-                  </>
-                )}
-                <button
-                  onClick={() => onToggleDone(i)}
-                  disabled={disabled}
-                  className={`ml-auto grid h-12 w-12 shrink-0 place-items-center rounded-xl border-2 transition ${
-                    s.done ? 'border-emerald-500 bg-emerald-500 text-zinc-950' : 'border-zinc-600 text-zinc-500 active:bg-zinc-700'
-                  } disabled:opacity-40`}
-                  aria-label={s.done ? `Undo ${setWord.toLowerCase()} ${i + 1}` : `Complete ${setWord.toLowerCase()} ${i + 1}`}
-                  aria-pressed={s.done}
-                >
-                  <Check size={24} strokeWidth={3} />
-                </button>
-              </li>
-            ))}
+                  {/* Cardio rounds are long; the "Last time" strip already lists them, so show only the change. */}
+                  {prev && (!cardio || (cmp && (cmp.dir !== 'same' || s.done))) && (
+                    <div className="flex items-center gap-2 pt-0.5 pb-0.5 pl-7 text-[11px] leading-tight">
+                      {!cardio && <span className="text-zinc-500 tabular-nums">last {fmtSetShort(prev, ex)}</span>}
+                      {cmp && (cmp.dir !== 'same' || s.done) && <Delta cmp={cmp} strong={s.done} />}
+                      {cardio && <span className="text-zinc-500">vs last time</span>}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
           </ol>
           <div className="mt-2 flex justify-end gap-2">
             <button
@@ -188,6 +217,26 @@ export default function ExerciseCard({
 }
 
 const cardioCols = (n) => (n <= 3 ? n : n === 4 ? 2 : 3)
+
+/** ▲ +2.5 kg / ▼ −1 rep / = matched vs. last time (brighter once the set is done). */
+function Delta({ cmp, strong }) {
+  const color =
+    cmp.dir === 'up'
+      ? strong
+        ? 'text-emerald-300'
+        : 'text-emerald-400/70'
+      : cmp.dir === 'down'
+        ? strong
+          ? 'text-amber-300'
+          : 'text-amber-400/70'
+        : 'text-zinc-400'
+  const icon = cmp.dir === 'up' ? '▲' : cmp.dir === 'down' ? '▼' : '='
+  return (
+    <span className={`font-semibold tabular-nums ${color}`}>
+      {icon} {cmp.text}
+    </span>
+  )
+}
 
 function NumInput({ value, onChange, mode, label, disabled, done, narrow, fluid }) {
   return (

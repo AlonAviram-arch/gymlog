@@ -76,9 +76,14 @@ export function parseImport(text) {
 
 /** Most recent logged sets for an exercise name, or null. */
 export function lastSessionSets(history, name) {
+  return lastSession(history, name)?.sets ?? null
+}
+
+/** Most recent logged session of an exercise: { sets, finishedAt } or null. */
+export function lastSession(history, name) {
   for (let i = history.length - 1; i >= 0; i--) {
     const e = history[i].exercises.find((x) => x.name === name)
-    if (e?.sets.length) return e.sets
+    if (e?.sets.length) return { sets: e.sets, finishedAt: history[i].finishedAt }
   }
   return null
 }
