@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'GymLog – 3-Day Split Tracker',
+        name: 'GymLog – Workout Tracker',
         short_name: 'GymLog',
-        description: 'Offline workout tracker with rest timer, history and plan editing.',
+        description: 'Offline workout tracker: programs, workout builder, rest timer, exercise demos and progress.',
         theme_color: '#09090b',
         background_color: '#09090b',
         display: 'standalone',

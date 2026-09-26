@@ -4,10 +4,11 @@ import { DEFAULT_PLAN } from '../data/defaultPlan'
 import { toNum, uid } from './format'
 
 const KEY = 'gymlog:v1'
-const VERSION = 2
+const VERSION = 3
 
 const clone = (x) => JSON.parse(JSON.stringify(x))
-export const DEFAULT_PLAN_NAME = 'My 3-Day Split'
+export const DEFAULT_PLAN_NAME = 'Starter Plan'
+const OLD_DEFAULT_PLAN_NAME = 'My 3-Day Split' // name used before v3
 
 export function initialState() {
   return {
@@ -40,8 +41,11 @@ function normalize(data) {
     settings: { ...base.settings, ...(data.settings ?? {}) },
     customExercises: Array.isArray(data.customExercises) ? data.customExercises : [],
     history: Array.isArray(data.history) ? data.history : [],
-    savedPlans: Array.isArray(data.savedPlans) ? data.savedPlans : [],
-    planName: data.planName || DEFAULT_PLAN_NAME,
+    // v3: the example plan is called "Starter Plan" (was "My 3-Day Split")
+    savedPlans: (Array.isArray(data.savedPlans) ? data.savedPlans : []).map((p) =>
+      p.name === OLD_DEFAULT_PLAN_NAME ? { ...p, name: DEFAULT_PLAN_NAME } : p,
+    ),
+    planName: !data.planName || data.planName === OLD_DEFAULT_PLAN_NAME ? DEFAULT_PLAN_NAME : data.planName,
     plan,
   }
 }
@@ -224,7 +228,8 @@ export const replaceExercise = (s, dayId, exId, name, muscle, patch = {}) =>
     exId,
   )
 
-export const resetPlan = (s) => ({ ...s, plan: clone(DEFAULT_PLAN), planName: DEFAULT_PLAN_NAME, active: null })
+/** Load the example starter plan (your current plan is saved under My plans first). */
+export const resetPlan = (s) => applyPlan(s, DEFAULT_PLAN_NAME, clone(DEFAULT_PLAN))
 
 /* ---------- programs & multiple plans ---------- */
 

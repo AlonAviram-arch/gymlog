@@ -109,8 +109,15 @@ export default function SettingsSheet({ state, act, onClose }) {
       </Section>
 
       <Section title="Danger zone">
-        <button className={row} onClick={() => confirm('Reset all days to the original 3-day split? History is kept.') && act(A.resetPlan)}>
-          <RotateCcw size={20} className="text-amber-400" /> Reset plan to default
+        <button
+          className={row}
+          onClick={() =>
+            confirm(
+              'Load the Starter Plan (the example plan the app came with)? Your current plan is saved under My plans, and history is kept.',
+            ) && act(A.resetPlan)
+          }
+        >
+          <RotateCcw size={20} className="text-amber-400" /> Load the starter plan
         </button>
         <button className={row} onClick={() => confirm('Delete ALL workout history? Export a backup first!') && act(A.clearHistory)}>
           <Trash2 size={20} className="text-red-400" /> Clear history

@@ -1,6 +1,6 @@
-# GymLog: 3-Day Split Tracker
+# GymLog: Offline Workout Tracker
 
-A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It runs entirely in the browser, works offline, and stores everything in `localStorage`. Add it to your phone's home screen and use it at the gym like a native app. No account, no server, no tracking.
+A lightweight, mobile-first **Progressive Web App** for planning and logging workouts: pick a ready-made program (full body, upper/lower, push/pull/legs, glutes, home…), build single sessions by muscle focus, and track every set against last time. It runs entirely in the browser, works offline, and stores everything in `localStorage`. Add it to your phone's home screen and use it at the gym like a native app. No account, no server, no tracking.
 
 ---
 
@@ -8,17 +8,16 @@ A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It
 
 | Area | What you get |
 | --- | --- |
-| **Pre-loaded program** | A 3-day full-body split, a home forearm routine and a cardio day, ready to use on first launch. |
-| **Programs** | 11 ready-made plans: Full Body 2×/3×, Upper/Lower 4×, Push/Pull/Legs 3× and 6×, Body-Part Split 5×, Glutes & Lower-Body Focus, Strength Basics A/B, Dumbbell Full Body, Bodyweight Anywhere, and Lift + Cardio Hybrid. Filter by days/week, goal and the equipment you have. Every program adapts to **full gym, dumbbells only, or bodyweight**, and sets/reps/rest adapt to your goal (muscle, strength, general fitness, conditioning). Use one as your plan, or add its days to your current plan. |
+| **Programs** | 26 ready-made plans in 7 styles: **full body** (2×, 3×, 4×, 30-minute, machine starter, dumbbell, bodyweight), **upper/lower** (4×, Upper/Lower/Full 3×, PHUL, dumbbell, bodyweight), **push/pull/legs** (3×, 6×, PPL + Upper/Lower 5×), **body-part splits** (5-day, Arnold 6×, upper-body focus), **glutes & legs** (Glute Builder, Glutes & Lower-Body Focus), **strength** (Strength Basics A/B, Powerlifting Basics) and **cardio & conditioning** (Lift + Cardio Hybrid, Fat-Loss Circuits, Cardio Base, Athletic & Functional). Filter by equipment, days/week, style and goal. Every program adapts to **full gym, dumbbells only, or bodyweight**, and sets/reps/rest adapt to your goal. Use one as your plan, or add its days to your current plan. |
 | **Workout builder** | Build a single session by focus (Full Body, Upper, Lower, Push, Pull, Legs, Glutes, Chest & Back, Shoulders, Arms, Core, Conditioning), equipment, goal and length. Reshuffle one exercise or all of them, then add it to your plan. |
-| **Multiple plans** | Switching to a program saves your current plan under **My plans**, so you can switch back anytime. Rename plans, and rename, delete or add days. |
+| **Multiple plans** | Switching to a program saves your current plan under **My plans**, so you can switch back anytime. Rename plans, and rename, delete or add days. A small example **Starter Plan** is loaded on first launch so you can try the app right away. |
 | **Exercise library** | 1,300+ exercises from the [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset), plus common gym cardio. Search by name, **filter by muscle** (optionally including secondary muscles) and **by equipment** (30 types), read step-by-step instructions, and add any exercise to any day. |
 | **Exercise demos** | Animated GIF demos in the library, and a thumbnail on every workout card. Tap it for the demo plus step-by-step instructions. Demos you open (or all your plan's demos, from Settings) are cached for offline use. |
 | **Workout complete** | After finishing: duration, sets, volume vs. last time, a fun weight comparison, and any **personal records** (heaviest weight or best estimated 1RM). A live session clock runs while you train. |
 | **Overview dashboard** | History → Overview: workouts this week vs. your weekly goal, **week streak**, consistency (weeks on goal), total volume/time/cardio, a GitHub-style **activity calendar** and **sets per muscle** for the last 30 days. |
 | **Cardio logging** | Treadmill incline walks, bikes, rowers and more. Each round logs the fields you choose (time, speed, incline, distance, level, calories) instead of kg × reps. A "Timer 30 min" button counts down your cardio block. |
 | **Active workout tracker** | One-handed checklist with per-set **kg × reps** inputs and big ✓ buttons. |
-| **Auto-fill** | Each set pre-fills with the weight/reps from your previous session of that exercise, and a "Last:" line shows the whole previous session. |
+| **Last-time benchmark** | Each exercise shows its last session (date + every set), and each set shows last time's result with a live ▲/▼ comparison as you log. Sets pre-fill with last time's numbers. |
 | **Rest timer** | Checking off a set starts that exercise's prescribed rest. A sticky bar shows **MM:SS**, a progress bar, and **−15s / +15s / Pause / Skip**. Tap any rest pill to start the timer manually. |
 | **Alerts** | Double-beep synthesized with the Web Audio API (no audio files), plus `navigator.vibrate([200, 100, 200])`. The screen stays awake while resting (Wake Lock API). |
 | **Supersets** | Grouped visually. The first movement has no rest, and the rest timer runs after the second. |
@@ -44,9 +43,12 @@ A lightweight, mobile-first **Progressive Web App** for logging gym sessions. It
 
 ---
 
-## The default program
+## Example starter plan
 
-This is the plan the app starts with (**My 3-Day Split**). Pick a different one anytime from **Workouts → Programs & workout builder**. Rest times are the prescribed defaults, and you can edit them in the app.
+On first launch the app loads a small example plan, the **Starter Plan**, so there's something to log right away. It's just a sample: replace it from **Workouts → Programs & workout builder** (it's kept under **My plans**), or bring it back later from **⚙ Settings → Load the starter plan**.
+
+<details>
+<summary>What's in the Starter Plan</summary>
 
 ### Day 1: Quads, Chest, Hamstrings & Glutes
 
@@ -99,6 +101,8 @@ This is the plan the app starts with (**My 3-Day Split**). Pick a different one 
 Add more cardio from **Exercises → Library** (use the *Cardio* muscle filter), or add a cardio exercise to the end of any lifting day.
 
 > The original program doesn't specify superset or forearm rest times. The 90 s and 60 s values above are defaults you can change with **Edit → ✎** on any exercise.
+
+</details>
 
 ---
 

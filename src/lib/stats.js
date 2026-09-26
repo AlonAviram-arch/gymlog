@@ -1,7 +1,7 @@
 // Training analytics, adapted from ideas in LogPress (github.com/hasaneyldrm/logpress-public, MIT):
 // totals, streaks, consistency score, activity calendar and muscle-group distribution —
 // computed locally from history. Streaks are counted in weeks (not days) so rest days
-// in a 3-day split don't break them.
+// in a split routine don't break them.
 
 const DAY = 86400000
 

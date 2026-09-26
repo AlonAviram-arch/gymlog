@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight, Dices, Link2, Pencil, Plus, Shuffle, Trash2, X } from 'lucide-react'
 import * as A from '../lib/store'
-import { EQUIPMENT, FOCUSES, GOALS, LENGTHS, LEVELS, PROGRAMS } from '../data/programs'
+import { EQUIPMENT, FOCUSES, GOALS, LENGTHS, LEVELS, PROGRAMS, STYLES } from '../data/programs'
 import { buildFocusWorkout, buildProgram, missingSlots, reshuffleExercise } from '../lib/generator'
 import { fmtDate, fmtRest, uid } from '../lib/format'
 import { Thumb } from './ExerciseMedia'
@@ -47,6 +47,7 @@ export default function ProgramsView({ state, act, onBack, onOpenDay }) {
 function ProgramCatalog({ state, act, onDone }) {
   const [days, setDays] = useState('any')
   const [goal, setGoal] = useState('any')
+  const [style, setStyle] = useState('any')
   const [equipment, setEquipment] = useState('gym')
   const [open, setOpen] = useState(null)
 
@@ -57,6 +58,7 @@ function ProgramCatalog({ state, act, onDone }) {
     .filter(({ p, missing, slots }) => missing / slots <= 0.25)
     .filter(({ p }) => days === 'any' || (days === '5+' ? p.perWeek >= 5 : p.perWeek === Number(days)))
     .filter(({ p }) => goal === 'any' || p.goal === goal)
+    .filter(({ p }) => style === 'any' || p.style === style)
     // Programs designed for this equipment first
     .sort((a, b) => (b.p.equipment === equipment) - (a.p.equipment === equipment))
 
@@ -81,7 +83,11 @@ function ProgramCatalog({ state, act, onDone }) {
             ['5+', '5–6'],
           ]}
         />
+        <FilterRow label="Style" value={style} onChange={setStyle} options={[['any', 'Any'], ...Object.entries(STYLES)]} />
         <FilterRow label="Goal" value={goal} onChange={setGoal} options={[['any', 'Any'], ...Object.entries(GOALS)]} />
+        <p className="pt-1 text-sm text-zinc-400">
+          {list.length} program{list.length === 1 ? '' : 's'}
+        </p>
       </div>
 
       <ul className="mt-4 space-y-3">
