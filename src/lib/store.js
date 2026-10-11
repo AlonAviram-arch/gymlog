@@ -19,6 +19,7 @@ export function initialState() {
     customExercises: [],
     // chronological: [{ id, dayId, dayName, startedAt, finishedAt, exercises: [{ name, muscle, unit, type, metrics, sets: [{ weight, reps } | { duration, speed, … }] }] }]
     history: [],
+    records: [], // manually logged lifts: [{ id, name, weight, reps, date, note }]
     active: null, // { dayId, startedAt, logs: { [exerciseId]: [{ weight, reps, done } | { duration, …, done }] } }
     settings: { sound: true, vibrate: true, weeklyGoal: 3 },
   }
@@ -41,6 +42,7 @@ function normalize(data) {
     settings: { ...base.settings, ...(data.settings ?? {}) },
     customExercises: Array.isArray(data.customExercises) ? data.customExercises : [],
     history: Array.isArray(data.history) ? data.history : [],
+    records: Array.isArray(data.records) ? data.records : [],
     // v3: the example plan is called "Starter Plan" (was "My 3-Day Split")
     savedPlans: (Array.isArray(data.savedPlans) ? data.savedPlans : []).map((p) =>
       p.name === OLD_DEFAULT_PLAN_NAME ? { ...p, name: DEFAULT_PLAN_NAME } : p,
@@ -294,6 +296,9 @@ export const updateCustom = (s, id, patch) => ({
 export const removeCustom = (s, id) => ({ ...s, customExercises: s.customExercises.filter((c) => c.id !== id) })
 
 /* ---------- history & settings ---------- */
+
+export const addRecord = (s, rec) => ({ ...s, records: [...s.records, { ...rec, id: uid() }] })
+export const deleteRecord = (s, id) => ({ ...s, records: s.records.filter((r) => r.id !== id) })
 
 export const deleteSession = (s, id) => ({ ...s, history: s.history.filter((h) => h.id !== id) })
 export const clearHistory = (s) => ({ ...s, history: [] })

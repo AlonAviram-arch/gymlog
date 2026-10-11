@@ -6,6 +6,7 @@ import { CARDIO_METRICS, METRIC_KEYS } from '../data/cardio'
 import { SettingsButton, inputCls } from './ui'
 import ProgressChart from './ProgressChart'
 import Overview from './Overview'
+import RecordsView from './RecordsView'
 
 const round1 = (n) => Math.round(n * 10) / 10
 
@@ -17,26 +18,32 @@ export default function HistoryTab({ state, act, onOpenSettings }) {
       <header className="flex items-center justify-between pt-2 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">History</h1>
-          <p className="text-sm text-zinc-400">{state.history.length} workouts logged</p>
+          <p className="text-sm text-zinc-400">
+            {state.history.length} workouts logged
+            {state.records.length ? ` · ${state.records.length} lift${state.records.length === 1 ? '' : 's'}` : ''}
+          </p>
         </div>
         <SettingsButton onClick={onOpenSettings} />
       </header>
-      <div className="mb-4 grid grid-cols-3 rounded-xl bg-zinc-900 p-1">
+      <div className="mb-4 grid grid-cols-4 rounded-xl bg-zinc-900 p-1">
         {[
           ['overview', 'Overview'],
           ['progress', 'Progress'],
+          ['records', 'Records'],
           ['sessions', 'Sessions'],
         ].map(([id, label]) => (
           <button
             key={id}
             onClick={() => setView(id)}
-            className={`h-11 rounded-lg text-sm font-semibold ${view === id ? 'bg-zinc-700 text-zinc-50' : 'text-zinc-400'}`}
+            className={`h-11 rounded-lg text-[13px] font-semibold ${view === id ? 'bg-zinc-700 text-zinc-50' : 'text-zinc-400'}`}
           >
             {label}
           </button>
         ))}
       </div>
-      {state.history.length === 0 ? (
+      {view === 'records' ? (
+        <RecordsView state={state} act={act} />
+      ) : state.history.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-800 p-10 text-center text-zinc-500">
           <TrendingUp className="mx-auto mb-3" size={32} />
           Finish a workout and your progress shows up here.

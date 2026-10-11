@@ -35,7 +35,7 @@ export function entryCardioMinutes(entry) {
 }
 
 /** Epley estimated one-rep max. */
-export const e1rm = (w, r) => (w && r ? w * (1 + r / 30) : 0)
+export const e1rm = (w, r) => (w && r ? (r === 1 ? w : w * (1 + r / 30)) : 0) // a single is its own 1RM
 
 function bestOf(sets) {
   let weight = 0
@@ -81,7 +81,7 @@ export function volumeEquivalent(kg) {
 }
 
 /** Summary for the "Workout complete" screen. */
-export function sessionSummary(entry, earlier) {
+export function sessionSummary(entry, earlier, extraLifts = []) {
   const prevSameDay = [...earlier].reverse().find((h) => h.dayId === entry.dayId)
   const volume = entryVolume(entry)
   const prevVolume = prevSameDay ? entryVolume(prevSameDay) : null
@@ -92,7 +92,7 @@ export function sessionSummary(entry, earlier) {
     volume,
     volumeDelta: prevVolume ? (volume - prevVolume) / prevVolume : null,
     cardioMinutes: entryCardioMinutes(entry),
-    prs: findPRs(entry, earlier),
+    prs: findPRs(entry, [...earlier, ...extraLifts]), // extraLifts: manually logged records
     equivalent: volumeEquivalent(volume),
   }
 }

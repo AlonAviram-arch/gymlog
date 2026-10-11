@@ -24,6 +24,7 @@ A lightweight, mobile-first **Progressive Web App** for planning and logging wor
 | **Plan management** | Per day: reorder (↑/↓), remove, edit sets/reps/rest, or add exercises. |
 | **Suggest alternative** | Swap any exercise for curated suggestions for the same muscle, your own custom exercises, the full library pre-filtered to that muscle, or any name you type. |
 | **Custom exercises** | Build a personal library (name, muscle, sets, rep range, rest, reps/seconds) and add items to any day. |
+| **Lift records** | History → Records: pick any exercise and log a weight × reps with a date and note, outside of a workout. Each exercise shows its heaviest lift, best estimated 1RM, a **rep-max table** (1/3/5/8/10/12RM), a progress chart (weight or estimated 1RM) and every lift, combining logged lifts with sets from finished workouts. New records are flagged 🏆. |
 | **History & progress** | Per-exercise chart of your top set over time (for cardio: time, distance, speed or incline per session), best/latest stats, per-session set lists, and a full session log with delete. |
 | **Backup** | Export or import all data as JSON from Settings (⚙). |
 | **Offline PWA** | Service worker precaches the app. It installs to the home screen and runs with no connection. |
@@ -222,6 +223,7 @@ All state is stored under the `localStorage` key `gymlog:v1` (settings include `
   "version": 1,
   "plan": [{ "id": "day1", "name": "Day 1", "title": "…", "exercises": [{ "id": "…", "name": "…", "muscle": "quads", "sets": 3, "reps": "6-8", "rest": 150, "unit": "reps", "superset": null }] }],
   "customExercises": [],
+  "records": [{ "id": "…", "name": "Barbell Back Squats", "weight": 100, "reps": 5, "date": 0, "note": "" }],
   "history": [{ "id": "…", "dayId": "day1", "dayName": "…", "startedAt": 0, "finishedAt": 0,
                 "exercises": [{ "name": "Barbell Back Squats", "muscle": "quads", "unit": "reps", "sets": [{ "weight": 80, "reps": 8 }] }] }],
   "active": null,

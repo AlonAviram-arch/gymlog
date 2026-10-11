@@ -9,6 +9,7 @@ import SettingsSheet from './components/SettingsSheet'
 import WorkoutsTab from './components/WorkoutsTab'
 import WorkoutSummary from './components/WorkoutSummary'
 import { sessionSummary } from './lib/stats'
+import { recordsAsHistory } from './lib/records'
 
 export default function App() {
   const [state, setState] = useState(loadState)
@@ -43,7 +44,9 @@ export default function App() {
               window.scrollTo({ top: 0 })
             }}
             onOpenSettings={() => setSettingsOpen(true)}
-            onFinished={(entry, earlier) => setFinished({ entry, summary: sessionSummary(entry, earlier) })}
+            onFinished={(entry, earlier) =>
+              setFinished({ entry, summary: sessionSummary(entry, earlier, recordsAsHistory(state.records)) })
+            }
           />
         )}
         {tab === 'history' && <HistoryTab state={state} act={act} onOpenSettings={() => setSettingsOpen(true)} />}
